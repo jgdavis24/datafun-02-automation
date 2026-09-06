@@ -5,37 +5,29 @@ Date: 2026-09-06
 
 HOW TO RUN THIS FILE:
 
-From the VS Code menu (with only this project open in VS Code),
-click "Terminal" / New Terminal to
-open an integrated Terminal in the root project folder.
-Paste the following command and press ENTER or RETURN
-to run this file as a script:
+Open a terminal in the root project folder and run:
 
 uv run python -m datafun.app
 
 DOMAIN:
 
-A dataset of penguins.
-See docs/data-card.md for more information about the dataset.
+Palmer Penguins. 344 observations of three penguin species across
+three islands in the Palmer Archipelago, Antarctica.
+See docs/data-card.md for details.
 
-EXPLORE:
+WHAT THIS DOES:
 
-Use Python to repeat and make decisions:
-- repeat work for each item in a list
-- branch based on a condition
-- transform values with a list comprehension
-- repeat work while a condition is true
+Loads the dataset, inspects its shape, then uses Python control flow
+to classify penguins by body mass against thresholds calculated from
+the sample mean. Every step is logged to project.log.
 
 ORGANIZATION:
 
-This file is the main script for the project.
-Execution begins at the start of the main() function.
-We organize the instructions into different files
-(a Python file is called a module).
+Execution begins in main(). Supporting functions live in
+src/datafun/utils_data.py.
 """
 
-
-# === DECLARE IMPORTS (BRING IN FREE CODE) ===
+# === IMPORTS ===
 
 import logging
 from pathlib import Path
@@ -49,86 +41,61 @@ import pandas as pd
 
 from datafun.utils_data import inspect
 
-# === CONFIGURE LOGGER ONCE FOR THE APPLICATION ===
+# === LOGGER ===
 
 LOG: logging.Logger = get_logger("P02", level="DEBUG")
 
-# === DECLARE GLOBAL CONSTANTS ===
+# === PATHS ===
 
-# Some global variables are CONSTANT,
-# they do NOT change when the program runs.
-# By convention, constants are named in
-# UPPERCASE_WITH_UNDERSCORES.
-# `Final` is added to indicate these variables
-# should not be reassigned.
-
-# === PATHS ARE IMPORTANT ===
-
-# Clearly define relative paths to important items (like data files).
-# The `Python Standard Library` is available in every Python project.
-
-# One of the modules in the Python Standard Library is `pathlib`,
-# which provides classes for handling filesystem paths.
-
-# === LOCATE THE DATA FILE ===
-
-# Use the Path() constructor to create a Path object representing the "data" folder.
-# Combine with the CSV file name
-# to get the full path to the data file.
 DATA_FILE_PATH: Final[Path] = Path("data") / "penguins.csv"
 
-# === OPEN THE DATA FILE IN EXCEL ===
+# === WHAT ONE ROW REPRESENTS ===
 
-# Look in the data/ folder. Open the file in Excel.
-# Understand what is there and record your observations.
+GRAIN: Final[str] = "one penguin"
 
-# === DETERMINE WHAT A ROW REPRESENTS ===
+# === GROUPING COLUMN ===
 
-# CUSTOM: This is the GRAIN of the dataset - the single most
-# important thing to know about any dataset.
-# Come up with a short phrase that describes it.
-# Fill this string value AFTER exploring the data.
-GRAIN: Final[str] = "one penguin"  # CUSTOM
-
-
-# CUSTOM: Choose a categorical group that we could process with a for loop.
 GROUP_COLUMN: Final[str] = "species"
-# CUSTOM: Describe why we choose it.
-# Use a triple-quoted string (three double quotes) to allow multi-line text.
-# Use a raw string (r before the opening quotes) so it appears just
-# like I typed it.
+
 WHY_THIS_GROUP: Final[str] = r"""
-The species column has a small number of unique values.
-There are three unique species, so a for loop can
-process and log each one.
+Species has only three unique values, so a for loop can process each
+one without the output becoming unreadable. Island would also work,
+but species is the variable that actually drives the physical
+measurements in this dataset.
 """
 
-# CUSTOM: WHICH measurement to classify, and why this one.
-MEASUREMENT_COLUMN: Final[str] = "bill_length_mm"
+# === MEASUREMENT COLUMN ===
 
-# CUSTOM: Describe why we choose it.
-# Use a triple-quoted string (three double quotes) to allow multi-line text.
-# Use a raw string (r before the opening quotes) so it appears just
-# like I typed it.
+MEASUREMENT_COLUMN: Final[str] = "body_mass_g"
+
 WHY_THIS_MEASUREMENT: Final[str] = r"""
-Bill length varies across penguins.
-There is no fixed cutoff, so we'll calculate the average
-and assign a classification depending on a threshold
-around the average value.
+Body mass separates the three species more cleanly than the bill
+measurements do. Gentoo penguins are substantially heavier than
+Adelie and Chinstrap, so the distribution is not one hump around a
+single average. Classifying against the mean actually splits the data
+into groups that correspond to something real.
+
+Scale is the other reason. Bill length runs 32 to 60 mm, a range of
+27 around a mean of 44. Body mass runs 2700 to 6300 grams, a range of
+3600 around a mean near 4200. The wider relative spread means the
+threshold bands land on meaningful differences instead of rounding
+error.
 """
 
-# CUSTOM: Set thresholds around the mean to
-# classify a reading.
-SHORT_THRESHOLD_MULTIPLIER: Final[float] = 0.9
-LONG_THRESHOLD_MULTIPLIER: Final[float] = 1.1
+# === CLASSIFICATION THRESHOLDS ===
 
-# === DEFINE THE MAIN FUNCTION ===
+# Wider bands than the 0.9 / 1.1 used for bill length. Body mass has a
+# larger spread, so a 10 percent window would classify most of the
+# sample as LIGHT or HEAVY and leave the middle band nearly empty.
+# 0.85 and 1.15 put the cutoffs near 3600 g and 4800 g, which lands
+# roughly between the Adelie and Chinstrap cluster and the Gentoo one.
+
+LIGHT_THRESHOLD_MULTIPLIER: Final[float] = 0.85
+HEAVY_THRESHOLD_MULTIPLIER: Final[float] = 1.15
 
 
 def main() -> None:
-    """Entry point when running this file as a Python script.
-
-    This is where the instructions begin.
+    """Entry point when running this file as a script.
 
     Arguments: None.
     Returns: None.
@@ -143,13 +110,7 @@ def main() -> None:
     LOG.info("01. LOAD the data.")
     LOG.info("-------------------------------")
 
-    # Use the imported privacy-preserving log_path() function
-    # To indicate where we will look for the data file.
     log_path(LOG, "data file", path=DATA_FILE_PATH)
-
-    # Call the built-in pandas `read_csv` function.
-    # Store the tabular pandas DataFrame returned
-    # in a local variable named `df`.
 
     df: pd.DataFrame = pd.read_csv(DATA_FILE_PATH)
 
@@ -159,12 +120,6 @@ def main() -> None:
     LOG.info("02. INSPECT the data.")
     LOG.info("-------------------------------")
 
-    # Call the inspect() function to get a string
-    # with basic information about the DataFrame.
-    # Pass in the pandas DataFrame (df)
-    # The grain (what one row represents)
-    # And the log so it knows where to send messages.
-
     inspection_string: str = inspect(df=df, grain=GRAIN, log=LOG)
 
     LOG.info(inspection_string)
@@ -173,50 +128,28 @@ def main() -> None:
     LOG.info("03. REPEAT logic using a for loop.")
     LOG.info("-------------------------------")
 
-    # Get a list of all column names in the DataFrame.
-    # Use the DataFrame's `columns` attribute and convert it to a list
-    # with the built-in tolist() method.
     column_names: list[str] = df.columns.tolist()
 
-    # For each name in the column names list, log its name.
-    # Note that we must use a colon at the end of the for loop line.
-    # And we must indent the body of the for loop correctly.
     for name in column_names:
         LOG.info(f"Column name: {name}")
 
-    # Up above, we choose a column to group by and log the reason for choosing it.
     LOG.info(f"Selected group column: {GROUP_COLUMN}")
     LOG.info(f"Reason for choosing this group: {WHY_THIS_GROUP}")
 
-    # Now, let us use Python to get the unique values in the selected group column.
-    # Use the df[column name] to get a one-dimensional array of values
-    # by passing in the exact column name as a string (in quotes).
-    # NOTE: The entry above must exactly match
-    # the column name in the CSV file, including case and spaces.
-    # Once we have that, we can apply the .unique() method to get the unique values.
-    # Once we have that, we can apply the .tolist() method to convert
-    # the array of unique values into a Python list of strings.
     unique_list: list[str] = df[GROUP_COLUMN].unique().tolist()
 
-    # For each unique item in the list, log the value.
     for item in unique_list:
         LOG.info(f"Item: {item}")
+
+    # Log the mean measurement for each species so the threshold choices
+    # below can be checked against the actual group averages.
+    for species in unique_list:
+        species_mean: float = df.loc[df[GROUP_COLUMN] == species, MEASUREMENT_COLUMN].mean()
+        LOG.info(f"Mean {MEASUREMENT_COLUMN} for {species}: {round(species_mean, 1)}")
 
     LOG.info("-------------------------------")
     LOG.info("04. TRANSFORM one list to another list.")
     LOG.info("-------------------------------")
-
-    # Python uses something called a "list comprehension"
-    # to transform one list into another when the transformation is simple.
-    # It is often more concise and readable than using a for loop.
-    # The list comprehension syntax is:
-    # [expression for item in iterable]
-    # where the expression is a simple transformation applied to each item.
-
-    # Common simple string transformations include:
-    # - converting strings to uppercase. e.g., name.upper()
-    # - converting strings to lowercase. e.g., name.lower()
-    # - stripping whitespace, e.g., name.strip()
 
     capitalized_column_names: list[str] = [name.upper() for name in column_names]
     LOG.info(f"Capitalized column names: {capitalized_column_names}")
@@ -225,7 +158,6 @@ def main() -> None:
     LOG.info("05. BRANCH based on conditions.")
     LOG.info("-------------------------------")
 
-    # Log the selected measurement column and the reason for choosing it.
     LOG.info(f"Selected measurement column: {MEASUREMENT_COLUMN}")
     LOG.info(f"Reason for choosing this measurement: {WHY_THIS_MEASUREMENT}")
 
@@ -234,74 +166,73 @@ def main() -> None:
     mean: float = df[MEASUREMENT_COLUMN].mean()
     LOG.info(f"{MEASUREMENT_COLUMN} - Minimum: {minimum}")
     LOG.info(f"{MEASUREMENT_COLUMN} - Maximum:  {maximum}")
-    LOG.info(f"{MEASUREMENT_COLUMN} - Mean:     {mean}")
+    LOG.info(f"{MEASUREMENT_COLUMN} - Mean:     {round(mean, 1)}")
     LOG.info("-------------------------------")
 
-    # Get the selected measurement for the first row in the DataFrame.
-    # Provide the exact column name as a string to access its values
-    # as an array-like object, from which we can select specific rows using iloc.
-    # iloc stands for "index location" and is used to select rows by their integer index.
-    # Python starts counting at 0, so iloc[0] refers to the first row.
-    # If it helps, you can think of it as 0 as "different from the list start".
-    # There is no difference between the first item and the start of the list so
-    # its offset or index is 0,
-    # and it can be accessed using iloc[0]
-    # The second item is one away from the start,
-    # so it can be accessed using iloc[1].
     sample_index: int = 0
     sample_reading: float = df[MEASUREMENT_COLUMN].iloc[sample_index]
     LOG.info(f"Sample {MEASUREMENT_COLUMN}: {sample_reading}")
 
-    LOG.info(f"Short threshold multiplier: {SHORT_THRESHOLD_MULTIPLIER}")
-    LOG.info(f"Long threshold multiplier:  {LONG_THRESHOLD_MULTIPLIER}")
+    LOG.info(f"Light threshold multiplier: {LIGHT_THRESHOLD_MULTIPLIER}")
+    LOG.info(f"Heavy threshold multiplier: {HEAVY_THRESHOLD_MULTIPLIER}")
 
-    short_threshold: float = SHORT_THRESHOLD_MULTIPLIER * mean
-    long_threshold: float = LONG_THRESHOLD_MULTIPLIER * mean
+    light_threshold: float = LIGHT_THRESHOLD_MULTIPLIER * mean
+    heavy_threshold: float = HEAVY_THRESHOLD_MULTIPLIER * mean
 
-    LOG.info(f"Short threshold: {short_threshold}")
-    LOG.info(f"Long threshold:  {long_threshold}")
+    LOG.info(f"Light threshold: {round(light_threshold, 1)}")
+    LOG.info(f"Heavy threshold: {round(heavy_threshold, 1)}")
 
-    # Use the Python keywords if, elif, and else
-    # to classify the selected measurement based on the calculated thresholds.
-    # elif means "else if"
-    if sample_reading < short_threshold:
-        classification_string: str = "SHORT"
-    elif sample_reading > long_threshold:
-        classification_string: str = "LONG"
+    if sample_reading < light_threshold:
+        classification_string: str = "LIGHT"
+    elif sample_reading > heavy_threshold:
+        classification_string: str = "HEAVY"
     else:
-        classification_string: str = "MEDIUM"
+        classification_string: str = "AVERAGE"
 
     LOG.info(f"First row {MEASUREMENT_COLUMN} classification: {classification_string}")
+
+    # Count how many penguins fall in each band so the thresholds can be
+    # judged on the whole sample instead of one row.
+    light_count: int = int((df[MEASUREMENT_COLUMN] < light_threshold).sum())
+    heavy_count: int = int((df[MEASUREMENT_COLUMN] > heavy_threshold).sum())
+    average_count: int = int(df[MEASUREMENT_COLUMN].notna().sum()) - light_count - heavy_count
+
+    LOG.info(f"LIGHT count:   {light_count}")
+    LOG.info(f"AVERAGE count: {average_count}")
+    LOG.info(f"HEAVY count:   {heavy_count}")
 
     LOG.info("-------------------------------")
     LOG.info("06. REPEAT while a condition is true.")
     LOG.info("-------------------------------")
 
-    # We can also perform logic repeatedly using a while loop.
-    # This is often used for streaming data or continuously monitoring a condition.
-    # In this example, we simulate streaming data by repeatedly processing
-    # one measurement from the CSV file
-    # every so many seconds, for a total of MAX_RECORDS measurements.
+    # Simulate a stream by reading one measurement at a time on a delay.
+    # 15 records instead of 10 so the classification runs across more of
+    # the opening rows and the LIGHT band shows up repeatedly.
 
-    # Constant values used by the while loop.
-    MAX_RECORDS: Final[int] = 10  # CUSTOM: change this from 10.
-    STREAM_WAIT_SECONDS: Final[int] = 1  # CUSTOM: Change this from 1 second.
+    MAX_RECORDS: Final[int] = 15
+    STREAM_WAIT_SECONDS: Final[int] = 1
 
     LOG.info("Starting to process measurements periodically...")
     LOG.info(f"Max records to process: {MAX_RECORDS}")
     LOG.info(f"Stream wait seconds: {STREAM_WAIT_SECONDS}")
 
-    # Initialize the count variable used by the while loop.
-    # By convention, counting starts at 0, so the first pass reads row 0.
     count: int = 0
     LOG.info(f"Current count: {count}")
 
-    # Start the while loop to process measurements periodically
-    # while the count is less than the maximum number of records.
     while count < MAX_RECORDS:
-        # Get the measurement from row `count`, which advances each pass.
         current_measurement: float = df[MEASUREMENT_COLUMN].iloc[count]
-        LOG.info(f"Current {MEASUREMENT_COLUMN}: {current_measurement}")
+
+        # Classify each streamed reading, not just the first row.
+        if pd.isna(current_measurement):
+            stream_class: str = "MISSING"
+        elif current_measurement < light_threshold:
+            stream_class = "LIGHT"
+        elif current_measurement > heavy_threshold:
+            stream_class = "HEAVY"
+        else:
+            stream_class = "AVERAGE"
+
+        LOG.info(f"Current {MEASUREMENT_COLUMN}: {current_measurement} -> {stream_class}")
 
         count += 1
         LOG.info(f"Updated count: {count}")
@@ -313,21 +244,14 @@ def main() -> None:
     LOG.info("-------------------------------")
 
     LOG.info("Creating a chart to visualize the selected measurement.")
-    LOG.info("We selected one numeric column, so let's look at the distribution.")
 
-    # Define a path to save the distribution plot.
-    # REQUIRED: Use the "docs/images" folder to store generated charts.
     CHART_PATH = Path("docs/images/measurement-distribution.png")
 
-    # Call an imported function that will show a distribution plot
-    # Pass in the pandas DataFrame (df) along with the selected measurement column.
-    # It will return a matplotlib Axes object representing the distribution plot.
     ax = show_numeric_distribution(
         df,
         column=MEASUREMENT_COLUMN,
     )
 
-    # call the save_chart() function and pass in the Axes and the path
     save_chart(ax, CHART_PATH)
     LOG.info(f"Chart saved successfully at {CHART_PATH}.")
 
@@ -340,13 +264,6 @@ def main() -> None:
     LOG.info("END main() - Executed successfully!")
     LOG.info("===================================")
 
-
-# === CONDITIONAL EXECUTION GUARD ===
-
-# WHY: This is standard Python "boilerplate" - we copy and paste it
-# into every Python script. It is a "conditional execution" guard,
-# meaning: if this file is being run as a script, then execute the code
-# in the main() function.
 
 if __name__ == "__main__":
     main()
