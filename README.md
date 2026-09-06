@@ -1,250 +1,135 @@
 # datafun-02-automation
 
-[![Workflow Guide](https://img.shields.io/badge/Pro--Guide-pro--analytics--02-green)](https://denisecase.github.io/pro-analytics-02/workflow-b-apply-example-project/)
+Classifying penguin body mass with Python control flow.
+
 [![Python 3.14](https://img.shields.io/badge/python-3.14%2B-blue?logo=python)](./pyproject.toml)
 [![uv managed](https://img.shields.io/badge/uv-managed-DE5FE9)](https://docs.astral.sh/uv/)
-[![ty type checked](https://img.shields.io/badge/ty-type_checked-2F80ED)](https://docs.astral.sh/ty/)
-[![Zensical docs](https://img.shields.io/badge/Zensical-docs-purple)](https://zensical.org/)
-[![MIT](https://img.shields.io/badge/license-see%20LICENSE-yellow.svg)](./LICENSE)
+[![MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](./LICENSE)
 
-> Professional Python project: automation with loops and branching.
+## The Problem
 
-## Our Approach: Learn by Doing
+The Palmer Penguins dataset has 344 observations across three species.
+Given a single body mass reading with no species label attached, can a
+simple threshold rule tell you anything useful about the penguin?
 
-This course builds capabilities through working projects.
-**Durable skills** are grounded in real work:
-setting up a professional environment,
-reading and running code,
-understanding the logic,
-and pushing work to a shared repository.
-Each example is a professional Python project.
+This project answers that with loops, branching, and a classification
+rule built from the sample mean.
 
-## First, Make Sure Your Machine is Set Up
+## Why Body Mass
 
-Complete **Workflow A: Set Up Your Machine** in
-[pro-analytics-02](https://denisecase.github.io/pro-analytics-02/).
+The example project classified bill length. Bill length is a single
+broad distribution centered near 44 mm, so a threshold split just
+carves an arbitrary line through one hump.
 
-## Project Motivation
+Body mass behaves differently. The species averages are:
 
-Explore data while learning some Python basics like branching and repetition.
-Analysts often **repeat logic** (e.g. do the same thing for each observation/row
-in a dataset) and **branch based on conditions**.
-For example, **if** a missing value is detected,
-**then** we apply special instructions.
+| Species | Mean body mass (g) |
+|---|---|
+| Adelie | 3,700.7 |
+| Chinstrap | 3,733.1 |
+| Gentoo | 5,076.0 |
 
-## Use Python to Automate Logic
+Adelie and Chinstrap are nearly identical. Gentoo is about 1,350 grams
+heavier. That gap makes the overall distribution bimodal, so a
+threshold rule lands on a real boundary rather than an arbitrary one.
 
-Python helps automate our analysis.
-We will use:
+![Distribution of body mass](docs/images/measurement-distribution.png)
 
-- a `for` loop to repeat work for each item in a list
-- a **list comprehension** to transform one list into another
-- `if / elif / else` to branch based on conditions
-- a `while` loop to repeat work while a condition is true
+The two humps in the chart are the light species cluster and the
+Gentoo cluster.
 
-## Custom Narrative (Extracted from Output)
+## The Classification Rule
 
-Selected group column: **species**
+Thresholds are calculated from the sample mean of 4,201.8 g:
 
-Reason for choosing this group:
+- **LIGHT** - below 0.85 x mean (3,571.5 g)
+- **AVERAGE** - between the two thresholds
+- **HEAVY** - above 1.15 x mean (4,832.0 g)
 
-The species column has a small number of unique values.
-There are three unique species, so a for loop can
-process and log each one.
+The example used 0.9 and 1.1. Those bands are too narrow for a
+measurement with this spread and would push most of the sample into
+the outer categories. Widening to 0.85 and 1.15 produces:
 
-Selected measurement column: **bill_length_mm**
+| Band | Count | Share |
+|---|---|---|
+| LIGHT | 89 | 26% |
+| AVERAGE | 172 | 50% |
+| HEAVY | 81 | 24% |
 
-Reason for choosing this measurement:
+The heavy threshold at 4,832 g sits just under the Gentoo mean, so in
+practice HEAVY is a Gentoo detector built from one number and two
+comparisons.
 
-Bill length varies across penguins.
-There is no fixed cutoff, so we'll calculate the average
-and assign a classification depending on a threshold
-around the average value.
+## What the Code Does
 
-```text
-Sample bill_length_mm: 39.1
-Short threshold multiplier: 0.9
-Long threshold multiplier:  1.1
-Short threshold: 39.529736842105265
-Long threshold:  48.31412280701755
-First row bill_length_mm classification: SHORT
+1. Loads `data/penguins.csv` into a pandas DataFrame
+2. Inspects shape, columns, and the first rows
+3. Loops over species and logs the mean body mass for each
+4. Transforms column names with a list comprehension
+5. Calculates thresholds and classifies against them
+6. Counts how many observations land in each band
+7. Streams 15 records on a one second delay, classifying each
+8. Saves a distribution chart to `docs/images/`
 
-Max records to process: 10
-Stream wait seconds: 1
+Every step writes to `project.log`.
+
+## Handling Missing Data
+
+Row 4 of the dataset has no measurements at all. The streaming loop
+checks for it explicitly:
+
+```python
+if pd.isna(current_measurement):
+    stream_class: str = "MISSING"
+elif current_measurement < light_threshold:
+    stream_class = "LIGHT"
 ```
 
-See [project.log](project.log) for more.
+Without that first branch a NaN falls through every comparison and
+gets silently labeled AVERAGE, which would be wrong. Two of the 344
+rows are affected.
 
-## Initial Results
-
-The project creates a histogram showing the distribution
-of the selected numeric measurement.
-
-![Histogram of the selected measurement](docs/images/measurement-distribution.png)
-
-## Important Folders and Files
-
-- **data/** - the CSV data file
-- **docs/** - the project narrative and documentation
-- **src/datafun/** - the Python instructions
-- **zensical.toml** - update authorship & links
-
-## Common Workflow
-
-Follow the
-[step-by-step workflow guide](https://denisecase.github.io/pro-analytics-02/workflow-b-apply-example-project/)
-carefully.
-
-Why? Because getting a Python project running your
-machine requires many parts working together -
-and once it runs, it makes everything else possible.
-
-## Challenges
-
-Challenges are expected.
-Sometimes instructions may not quite match your operating system.
-When issues occur, share screenshots, error messages,
-and details about what you tried.
-Working through issues is part of implementing professional projects.
-
-## Success
-
-After completing Phase 1. **Start & Run**, you'll have the example project,
-running on your machine.
-A new file `project.log` will appear in the root project folder
-and running the example script will print out:
+## Run It
 
 ```shell
-===================================
-END main() - Executed successfully!
-===================================
-```
-
-## Command Reference
-
-The commands below are used in the workflow guide above.
-They are provided here for convenience.
-
-Follow the guide for the **full instructions**.
-
-<details>
-<summary>Show command reference</summary>
-
-### In a machine terminal (open in your `Repos` folder)
-
-Open a machine terminal in your `Repos` folder,
-change directory (cd) into the new folder,
-and run `code .` to open only this example project in VS Code:
-
-```shell
-git clone https://github.com/denisecase/datafun-02-automation
-
+git clone https://github.com/jgdavis24/datafun-02-automation
 cd datafun-02-automation
 code .
 ```
 
-### In a VS Code terminal
-
-These are listed for convenience.
-For best results, follow the detailed instructions in
-[pro-analytics-02 guide](https://denisecase.github.io/pro-analytics-02/).
-
-Use VS Code menu option `Terminal` / `New Terminal` to open a **VS Code terminal**
-in the root project folder.
-Copy each command, paste into your terminal, and hit ENTER,
-to run each command one at a time.
+Then in a VS Code terminal:
 
 ```shell
-uv self update
-uv python pin 3.14
-
-uv python install
-uv lock --upgrade
 uv sync
-
-uv run pre-commit install
-uv run pre-commit autoupdate
-
-git add -A
-uv run pre-commit run --all-files
-# repeat if changes were made by pre-commit tasks
-git add -A
-uv run pre-commit run --all-files
-
-# run the module
 uv run python -m datafun.app
-
-# do chores
-uv run ruff format .
-uv run ruff check . --fix
-uv run ty check
-uv run python -m pytest
-uv run python -m zensical build
-
-# save progress as you work
-git add -A
-git commit -m "your message here"
-# repeat if changes were made (try the UP ARROW)
-git add -A
-git commit -m "your message here"
-
-git push -u origin main
 ```
 
-</details>
+A successful run ends with:
 
-## Helpful Tips
+```shell
+END main() - Executed successfully!
+```
 
-- Use the **UP ARROW** and **DOWN ARROW** in the terminal
-  to scroll through past commands.
-- Use `CTRL+f` to find (and replace) text within a file.
+## Project Layout
 
-## Much Can Be Ignored
+- `data/` - the penguins CSV
+- `docs/` - documentation and generated charts
+- `src/datafun/` - application code
+- `tests/` - pytest suite
+- `pyproject.toml` - dependencies and tool config
 
-- You do not need to add to or modify `tests/`.
-  Tests are recommended and provided for example only.
-- Many files are silent helpers.
-  [Explore](https://denisecase.github.io/professional-python-project-explainer/)
-  as you like, but most files are never touched.
-- You do NOT need to understand everything;
-  let understanding build over time.
+## Techniques Used
 
-## As Needed
+pandas DataFrames, `for` loops, `while` loops, list comprehensions,
+`if`/`elif`/`else` branching, boolean masking for counts, NaN
+handling, matplotlib visualization, structured logging, type hints,
+and `Final` constants.
 
-If VS Code does not automatically use the new `.venv` environment:
+## Data Source
 
-1. Open the Command Palette (`Ctrl+Shift+P`).
-2. Run **Python: Select Interpreter**.
-3. Select the interpreter from this project's `.venv` folder.
-
-If VS Code still does not recognize the environment or newly installed tools:
-
-1. Open the Command Palette (`Ctrl+Shift+P`).
-2. Run **Developer: Reload Window**.
-
-## Troubleshooting >>>
-
-If you see something like this in your terminal: `>>>` or `...`
-You accidentally started Python interactive mode.
-It happens.
-Press `Ctrl c` (both keys together) or `Ctrl+Z` then `Enter` on Windows.
-
-## Documentation
-
-- [Documentation](https://denisecase.github.io/datafun-02-automation/)
-
-## Data Card
-
-- [Palmer Penguins Data Card](./docs/data-card.md)
-
-## Annotations
-
-- [.annotations/annotations.md](./.annotations/annotations.md)
-
-## Citation
-
-- [CITATION.cff](./CITATION.cff)
+Palmer Penguins, collected by Dr. Kristen Gorman at Palmer Station,
+Antarctica. See [docs/data-card.md](docs/data-card.md).
 
 ## License
 
-This project is licensed under the [MIT License](./LICENSE).
+MIT. See [LICENSE](LICENSE).
