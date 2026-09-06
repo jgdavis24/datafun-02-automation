@@ -1,0 +1,43 @@
+# ============================================================
+# CITATION.cff (How to cite this project)
+# ============================================================
+
+cff-version: "1.2.0"
+message: "If using this work, please cite it as described in this file."
+type: software
+
+title: "datafun-02-automation"
+version: "1.2.0"
+date-released: "2026-09-06"
+
+authors:
+  - family-names: Davis
+    given-names: Josiah
+    affiliation: "Northwest Missouri State University, Maryville, MO, USA"
+
+repository-code: "https://github.com/jgdavis24/datafun-02-automation"
+url: "https://github.com/jgdavis24/datafun-02-automation"
+license: MIT
+
+abstract: >
+  Data analytics project using Python loops and branching to classify
+  penguin body mass measurements against calculated thresholds.
+  Demonstrates control flow, list comprehensions, function organization,
+  and automated logging within a professional project structure.
+
+keywords:
+  - data-analytics
+  - data-exploration
+  - pandas
+  - matplotlib
+  - logging
+  - control-flow
+  - professional-python
+  - src-layout
+  - reproducible-workflows
+  - github-actions
+  - python
+  - git
+  - uv
+  - ruff
+  - pre-commit
