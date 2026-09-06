@@ -144,7 +144,9 @@ def main() -> None:
     # Log the mean measurement for each species so the threshold choices
     # below can be checked against the actual group averages.
     for species in unique_list:
-        species_mean: float = df.loc[df[GROUP_COLUMN] == species, MEASUREMENT_COLUMN].mean()
+        species_mean: float = df.loc[
+            df[GROUP_COLUMN] == species, MEASUREMENT_COLUMN
+        ].mean()
         LOG.info(f"Mean {MEASUREMENT_COLUMN} for {species}: {round(species_mean, 1)}")
 
     LOG.info("-------------------------------")
@@ -195,7 +197,9 @@ def main() -> None:
     # judged on the whole sample instead of one row.
     light_count: int = int((df[MEASUREMENT_COLUMN] < light_threshold).sum())
     heavy_count: int = int((df[MEASUREMENT_COLUMN] > heavy_threshold).sum())
-    average_count: int = int(df[MEASUREMENT_COLUMN].notna().sum()) - light_count - heavy_count
+    average_count: int = (
+        int(df[MEASUREMENT_COLUMN].notna().sum()) - light_count - heavy_count
+    )
 
     LOG.info(f"LIGHT count:   {light_count}")
     LOG.info(f"AVERAGE count: {average_count}")
@@ -232,7 +236,9 @@ def main() -> None:
         else:
             stream_class = "AVERAGE"
 
-        LOG.info(f"Current {MEASUREMENT_COLUMN}: {current_measurement} -> {stream_class}")
+        LOG.info(
+            f"Current {MEASUREMENT_COLUMN}: {current_measurement} -> {stream_class}"
+        )
 
         count += 1
         LOG.info(f"Updated count: {count}")
